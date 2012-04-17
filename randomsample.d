@@ -33,7 +33,7 @@ struct MyRandomSample(R, Random = void)
     private size_t _available, _howMany, _toSelect, _total;
     private immutable ushort _alphaInverse = 13;
     private bool _algorithmA;
-    private double _vPrime;
+    private double _Vprime;
     private R _input;
     private size_t _index;
 
@@ -61,11 +61,11 @@ Constructor.
         _available = _total = total;
         _toSelect = _howMany = howMany;
         enforce(_toSelect <= _available);
-        
+
         if((_alphaInverse * _toSelect) > _available) {
             _algorithmA = true;
         } else {
-            _vPrime = newVPrime(_toSelect);
+            _Vprime = newVprime(_toSelect);
             _algorithmA = false;
         }
         // we should skip some elements initially so we don't always
@@ -118,26 +118,12 @@ Returns the index of the visited record.
     {
         return _index;
     }
-    
-    private double newVPrime(size_t remaining)
-    {
-        static if(is(Random == void))
-        {
-            double r = uniform!("()")(0.0, 1.0);
-        }
-        else
-        {
-            double r = uniform!("()")(0.0, 1.0, gen);
-        }
-        
-        return r ^^ (1.0 / remaining);
-    }
-    
+
     private size_t skipA()
     {
         size_t S;
         double V, quot, top;
-        
+
         if(_toSelect==1)
         {
             static if(is(Random==void))
@@ -153,7 +139,7 @@ Returns the index of the visited record.
             S = 0;
             top = _available - _toSelect;
             quot = top / _available;
-            
+
             static if(is(Random==void))
             {
                 V = uniform!("()")(0.0, 1.0);
@@ -171,10 +157,94 @@ Returns the index of the visited record.
 
         return S;
     }
-    
+
+    private double newVprime(size_t remaining)
+    {
+        static if(is(Random == void))
+        {
+            double r = uniform!("()")(0.0, 1.0);
+        }
+        else
+        {
+            double r = uniform!("()")(0.0, 1.0, gen);
+        }
+
+        return r ^^ (1.0 / remaining);
+    }
+
     private size_t skip()
     {
-        return skipA;
+        if(_algorithmA)
+        {
+            return skipA;
+        }
+        else if((_alphaInverse * _toSelect) > _available)
+        {
+            _algorithmA = true;
+            return skipA;
+        }
+        else if ( _toSelect > 1 )
+        {
+            size_t S;
+            size_t top, t, limit;
+            size_t qu1 = 1 + _available - _toSelect;
+            double X, y1, y2, bottom;
+
+            while(1)
+            {
+                for(X = _available * (1-_Vprime), S = cast(size_t) trunc(X);
+                    S >= qu1;
+                    X = _available * (1-_Vprime), S = cast(size_t) trunc(X))
+                {
+                    _Vprime = newVprime(_toSelect);
+                }
+
+                y1 = (uniform!("()")(0.0, 1.0) * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+
+                _Vprime = y1 * ((-X/_available)+1.0) * ( qu1/( (cast(double) qu1) - S ) );
+
+                if(_Vprime > 1.0) {
+                    y2 = 1.0;
+                    top = _available -1;
+
+                    if(_toSelect > (S+1) )
+                    {
+                        bottom = _available - _toSelect;
+                        limit = _available - S;
+                    }
+                    else
+                    {
+                        bottom = _available - (S+1);
+                        limit = qu1;
+                    }
+
+                    for( t=_available-1; t>=limit; --t)
+                    {
+                        y2 *= top/bottom;
+                        top--;
+                        bottom--;
+                    }
+
+                    if( (_available/(_available-X)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
+                    {
+                        _Vprime = newVprime(_toSelect);
+                    }
+                    else
+                    {
+                        _Vprime = newVprime(_toSelect-1);
+                        return S;
+                    }
+                }
+                else
+                {
+                    return S;
+                }
+            }
+        }
+        else
+        {
+            return cast(size_t) trunc(_available * _Vprime);
+        }
     }
 
     private void prime()
@@ -243,9 +313,9 @@ unittest
 
 void samplingTestAggregate(size_t total, size_t n, size_t repeats=10_000_000, bool verbose=true)
 {
-    double[] recordCountS, recordCountA;
+    double[] recordCountS, recordCountD;
     clock_t start_time, end_time;
-        
+
     void displayResults(double[] recordCount)
     {
         foreach(size_t i, double c; recordCount)
@@ -254,7 +324,7 @@ void samplingTestAggregate(size_t total, size_t n, size_t repeats=10_000_000, bo
 
     writeln("Picking ", n, " from ", total, ", ", repeats, " times.");
     writeln;
-    
+
     writeln("Algorithm S:");
     recordCountS.length = total;
     recordCountS[] = 0.0;
@@ -270,36 +340,36 @@ void samplingTestAggregate(size_t total, size_t n, size_t repeats=10_000_000, bo
         displayResults(recordCountS);
     writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
     writeln;
-    
-    writeln("Algorithm A:");
-    recordCountA.length = total;
-    recordCountA[] = 0.0;
+
+    writeln("Algorithm D:");
+    recordCountD.length = total;
+    recordCountD[] = 0.0;
     start_time = clock();
     foreach(size_t i; 0..repeats)
     {
-        auto sampleA = myRandomSample(iota(0, total), n);
-        foreach(size_t s; sampleA)
-            recordCountA[s]++;
+        auto sampleD = myRandomSample(iota(0, total), n);
+        foreach(size_t s; sampleD)
+            recordCountD[s]++;
     }
     end_time = clock();
     if(verbose)
-        displayResults(recordCountA);
+        displayResults(recordCountD);
     writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
     writeln;
 }
 
 void main(string[] args)
 {
-    auto s = myRandomSample(iota(0,10),4);
-    
+    auto s = myRandomSample(iota(0,100),5);
+
     foreach(uint i; s)
         writeln(i);
-        
+
     writeln();
-    
+
     foreach(uint i; s)
         writeln(i);
-        
+
     samplingTestAggregate(100, 5);
 }
 
