@@ -65,7 +65,7 @@ Constructor.
         if((_alphaInverse * _toSelect) > _available) {
             _algorithmA = true;
         } else {
-            _Vprime = newVprime(_toSelect);
+            newVprime(_toSelect);
             _algorithmA = false;
         }
         // we should skip some elements initially so we don't always
@@ -158,7 +158,7 @@ Returns the index of the visited record.
         return S;
     }
 
-    private double newVprime(size_t remaining)
+    private void newVprime(size_t remaining)
     {
         static if(is(Random == void))
         {
@@ -169,7 +169,7 @@ Returns the index of the visited record.
             double r = uniform!("()")(0.0, 1.0, gen);
         }
 
-        return r ^^ (1.0 / remaining);
+        _Vprime = r ^^ (1.0 / remaining);
     }
 
     private size_t skip()
@@ -196,7 +196,7 @@ Returns the index of the visited record.
                     S >= qu1;
                     X = _available * (1-_Vprime), S = cast(size_t) trunc(X))
                 {
-                    _Vprime = newVprime(_toSelect);
+                    newVprime(_toSelect);
                 }
 
                 static if(is(Random == void))
@@ -236,11 +236,11 @@ Returns the index of the visited record.
 
                     if( (_available/(_available-X)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
                     {
-                        _Vprime = newVprime(_toSelect);
+                        newVprime(_toSelect);
                     }
                     else
                     {
-                        _Vprime = newVprime(_toSelect-1);
+                        newVprime(_toSelect-1);
                         return S;
                     }
                 }
