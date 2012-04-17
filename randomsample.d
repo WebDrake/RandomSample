@@ -379,6 +379,10 @@ void main(string[] args)
     foreach(uint i; s)
         writeln(i);
 
-    samplingTestAggregate(100, 5);
+    samplingTestAggregate(100, 5, 1_000_000);
+
+    samplingTestAggregate(1000, 5, 1_000_000, false);
+
+    samplingTestAggregate(100_000_000, 1_000, 1, false);
 }
 
