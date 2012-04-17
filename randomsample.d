@@ -133,38 +133,60 @@ Returns the index of the visited record.
         return r ^^ (1.0 / remaining);
     }
     
-    private void primeA()
+    private size_t skipA()
     {
+        size_t S;
+        double V, quot, top;
         
+        if(_toSelect==1)
+        {
+            static if(is(Random==void))
+            {
+                S = uniform(0, _available);
+            }
+            else
+            {
+                S = uniform(0, _available, gen);
+            }
+        }
+        else {
+            S = 0;
+            top = _available - _toSelect;
+            quot = top / _available;
+            
+            static if(is(Random==void))
+            {
+                V = uniform!("()")(0.0, 1.0);
+            }
+            else
+            {
+                V = uniform!("()")(0.0, 1.0, gen);
+            }
+
+            while (quot > V) {
+                ++S;
+                quot *= (top - S) / (_available - S);
+            }
+        }
+
+        return S;
+    }
+    
+    private size_t skip()
+    {
+        return skipA;
     }
 
     private void prime()
     {
         if (empty) return;
         assert(_available && _available >= _toSelect);
-        for (;;)
-        {
-            static if(is(Random == void))
-            {
-                auto r = uniform(0, _available);
-            }
-            else
-            {
-                auto r = uniform(0, _available, gen);
-            }
-
-            if (r < _toSelect)
-            {
-                // chosen!
-                return;
-            }
-            // not chosen, retry
-            assert(!_input.empty);
-            _input.popFront();
-            ++_index;
-            --_available;
-            assert(_available > 0);
-        }
+        immutable size_t S = skip;
+        _input.popFrontN(S);
+        _index += S;
+        _available -= S;
+        assert(_available > 0);
+        return;
     }
 }
 
@@ -219,16 +241,65 @@ unittest
     assert(i == 5);
 }
 
+void samplingTestAggregate(size_t total, size_t n, size_t repeats=10_000_000, bool verbose=true)
+{
+    double[] recordCountS, recordCountA;
+    clock_t start_time, end_time;
+        
+    void displayResults(double[] recordCount)
+    {
+        foreach(size_t i, double c; recordCount)
+            writeln("\trecord ", i, " was picked ", c, " times.");
+    }
+
+    writeln("Picking ", n, " from ", total, ", ", repeats, " times.");
+    writeln;
+    
+    writeln("Algorithm S:");
+    recordCountS.length = total;
+    recordCountS[] = 0.0;
+    start_time = clock();
+    foreach(size_t i; 0..repeats)
+    {
+        auto sampleS = randomSample(iota(0, total), n);
+        foreach(size_t s; sampleS)
+            recordCountS[s]++;
+    }
+    end_time = clock();
+    if(verbose)
+        displayResults(recordCountS);
+    writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
+    writeln;
+    
+    writeln("Algorithm A:");
+    recordCountA.length = total;
+    recordCountA[] = 0.0;
+    start_time = clock();
+    foreach(size_t i; 0..repeats)
+    {
+        auto sampleA = myRandomSample(iota(0, total), n);
+        foreach(size_t s; sampleA)
+            recordCountA[s]++;
+    }
+    end_time = clock();
+    if(verbose)
+        displayResults(recordCountA);
+    writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
+    writeln;
+}
+
 void main(string[] args)
 {
     auto s = myRandomSample(iota(0,10),4);
-	
+    
     foreach(uint i; s)
         writeln(i);
-		
-	writeln();
-	
+        
+    writeln();
+    
     foreach(uint i; s)
         writeln(i);
+        
+    samplingTestAggregate(100, 5);
 }
 
