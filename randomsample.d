@@ -199,7 +199,16 @@ Returns the index of the visited record.
                     _Vprime = newVprime(_toSelect);
                 }
 
-                y1 = (uniform!("()")(0.0, 1.0) * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+                static if(is(Random == void))
+                {
+                    double r = uniform!("()")(0.0, 1.0);
+                }
+                else
+                {
+                    double r = uniform!("()")(0.0, 1.0, gen);
+                }
+
+                y1 = (r * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
 
                 _Vprime = y1 * ((-X/_available)+1.0) * ( qu1/( (cast(double) qu1) - S ) );
 
