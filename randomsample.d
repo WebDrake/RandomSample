@@ -1,3 +1,9 @@
+import std.algorithm, std.c.time, std.conv, std.exception,
+       std.math, std.numeric, std.range, std.traits,
+       core.thread, core.time;
+
+import std.random, std.stdio;
+
 // MyRandomSample
 /**
 Selects a random subsample out of $(D r), containing exactly $(D n)
@@ -24,7 +30,10 @@ foreach (e; myRandomSample(a, 5))
 struct MyRandomSample(R, Random = void)
     if(isUniformRNG!Random || is(Random == void))
 {
-    private size_t _available, _toSelect;
+    private size_t _available, _howMany, _toSelect, _total;
+    private immutable ushort _alphaInverse = 13;
+    private bool _algorithmA;
+    private double _vPrime;
     private R _input;
     private size_t _index;
 
@@ -49,9 +58,16 @@ Constructor.
     this(R input, size_t howMany, size_t total)
     {
         _input = input;
-        _available = total;
-        _toSelect = howMany;
+        _available = _total = total;
+        _toSelect = _howMany = howMany;
         enforce(_toSelect <= _available);
+        
+        if((_alphaInverse * _toSelect) > _available) {
+            _algorithmA = true;
+        } else {
+            _vPrime = newVPrime(_toSelect);
+            _algorithmA = false;
+        }
         // we should skip some elements initially so we don't always
         // start with the first
         prime();
@@ -101,6 +117,25 @@ Returns the index of the visited record.
     size_t index()
     {
         return _index;
+    }
+    
+    private double newVPrime(size_t remaining)
+    {
+        static if(is(Random == void))
+        {
+            double r = uniform!("()")(0.0, 1.0);
+        }
+        else
+        {
+            double r = uniform!("()")(0.0, 1.0, gen);
+        }
+        
+        return r ^^ (1.0 / remaining);
+    }
+    
+    private void primeA()
+    {
+        
     }
 
     private void prime()
@@ -182,5 +217,18 @@ unittest
         //writeln(e);
     }
     assert(i == 5);
+}
+
+void main(string[] args)
+{
+    auto s = myRandomSample(iota(0,10),4);
+	
+    foreach(uint i; s)
+        writeln(i);
+		
+	writeln();
+	
+    foreach(uint i; s)
+        writeln(i);
 }
 
