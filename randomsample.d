@@ -186,9 +186,8 @@ Returns the index of the visited record.
         else if ( _toSelect > 1 )
         {
             size_t S;
-            size_t top, limit;
             size_t qu1 = 1 + _available - _toSelect;
-            double X, y1, y2, bottom;
+            double X, y1;
 
             while(1)
             {
@@ -213,6 +212,9 @@ Returns the index of the visited record.
                 _Vprime = y1 * ((-X/_available)+1.0) * ( qu1/( (cast(double) qu1) - S ) );
 
                 if(_Vprime > 1.0) {
+                    size_t top = _available - 1, limit;
+                    double y2 = 1.0, bottom;
+
                     if(_toSelect > (S+1) )
                     {
                         bottom = _available - _toSelect;
@@ -223,9 +225,6 @@ Returns the index of the visited record.
                         bottom = _available - (S+1);
                         limit = qu1;
                     }
-
-                    y2 = 1.0;
-                    top = _available -1;
 
                     foreach(size_t t; limit.._available)
                     {
