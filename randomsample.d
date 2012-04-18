@@ -228,7 +228,9 @@ Returns the index of the visited record.
 
                     foreach(size_t t; limit.._available)
                     {
-                        y2 *= (top-t)/(bottom-t);
+                        y2 *= top/bottom;
+                        top--;
+                        bottom--;
                     }
 
                     if( (_available/(_available-X)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
