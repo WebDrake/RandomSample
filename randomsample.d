@@ -17,6 +17,10 @@ RandomSampleVitter) throws an exception. This is because $(D total) is
 essential to computing the probability of selecting elements in the
 range.
 
+$(D RandomSampleVitter) implements Jeffrey Scott Vitter's Algorithm D,
+which selects a sample of size $(D n) in O(n) steps and requiring O(n)
+random variates, regardless of the size of the data being sampled.
+
 Example:
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
@@ -31,7 +35,7 @@ struct RandomSampleVitter(R, Random = void)
     if(isUniformRNG!Random || is(Random == void))
 {
     private size_t _available, _howMany, _toSelect, _total;
-    private immutable ushort _alphaInverse = 13;
+    private immutable ushort _alphaInverse = 13; // Vitter's recommended value.
     private bool _algorithmA;
     private double _Vprime;
     private R _input;
@@ -62,9 +66,14 @@ Constructor.
         _toSelect = _howMany = howMany;
         enforce(_toSelect <= _available);
 
-        if((_alphaInverse * _toSelect) > _available) {
+        // We can save ourselves a random variate by checking right
+        // at the beginning if we should use Algorithm A.
+        if((_alphaInverse * _toSelect) > _available)
+        {
             _algorithmA = true;
-        } else {
+        }
+        else
+        {
             newVprime(_toSelect);
             _algorithmA = false;
         }
@@ -119,6 +128,10 @@ Returns the index of the visited record.
         return _index;
     }
 
+/**
+Vitter's Algorithm A, used when the ratio of needed sample values
+to remaining data values is sufficiently large.
+*/
     private size_t skipA()
     {
         size_t S;
@@ -158,6 +171,9 @@ Returns the index of the visited record.
         return S;
     }
 
+/**
+Randomly reset the value of _Vprime.
+*/
     private void newVprime(size_t remaining)
     {
         static if(is(Random == void))
@@ -172,8 +188,23 @@ Returns the index of the visited record.
         _Vprime = r ^^ (1.0 / remaining);
     }
 
+/**
+Vitter's Algorithm D.  For an extensive description of the algorithm
+and its rationale, see:
+
+  * Vitter, J.S. (1984), "Faster methods for random sampling",
+    Commun. ACM 27(7): 703--718
+
+  * Vitter, J.S. (1987) "An efficient algorithm for sequential random
+    sampling", ACM Trans. Math. Softw. 13(1): 58-67.
+
+Variable names are chosen to match those in Vitter's paper.
+*/
     private size_t skip()
     {
+        // If the number of points still to select is greater than a
+        // certain proportion of the remaining data points, we carry
+        // out the sampling with Algorithm A.
         if(_algorithmA)
         {
             return skipA;
@@ -183,6 +214,7 @@ Returns the index of the visited record.
             _algorithmA = true;
             return skipA;
         }
+        // Otherwise, we use the standard Algorithm D mechanism.
         else if ( _toSelect > 1 )
         {
             size_t S;
@@ -191,6 +223,7 @@ Returns the index of the visited record.
 
             while(1)
             {
+                // Step D2: set values of X and U.
                 for(X = _available * (1-_Vprime), S = cast(size_t) trunc(X);
                     S >= qu1;
                     X = _available * (1-_Vprime), S = cast(size_t) trunc(X))
@@ -200,18 +233,21 @@ Returns the index of the visited record.
 
                 static if(is(Random == void))
                 {
-                    double r = uniform!("()")(0.0, 1.0);
+                    double U = uniform!("()")(0.0, 1.0);
                 }
                 else
                 {
-                    double r = uniform!("()")(0.0, 1.0, gen);
+                    double U = uniform!("()")(0.0, 1.0, gen);
                 }
 
-                y1 = (r * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
+                y1 = (U * (cast(double) _available) / qu1) ^^ (1.0/(_toSelect - 1));
 
                 _Vprime = y1 * ((-X/_available)+1.0) * ( qu1/( (cast(double) qu1) - S ) );
 
-                if(_Vprime > 1.0) {
+                // Step D3: if _Vprime <= 1.0 our work is done and we return S.
+                // Otherwise ...
+                if(_Vprime > 1.0)
+                {
                     size_t top = _available - 1, limit;
                     double y2 = 1.0, bottom;
 
@@ -233,24 +269,32 @@ Returns the index of the visited record.
                         bottom--;
                     }
 
+                    // Step D4: decide whether or not to accept the current value of S.
                     if( (_available/(_available-X)) < (y1 * (y2 ^^ (1.0/(_toSelect-1)))) )
                     {
+                        // If it's not acceptable, we generate a new value of _Vprime
+                        // and go back to the start of the for(;;) loop.
                         newVprime(_toSelect);
                     }
                     else
                     {
+                        // If it's acceptable we generate a new value of _Vprime
+                        // based on the remaining number of sample points needed,
+                        // and return S.
                         newVprime(_toSelect-1);
                         return S;
                     }
                 }
                 else
                 {
+                    // Return if condition D3 satisfied.
                     return S;
                 }
             }
         }
         else
         {
+            // If only one sample point remains to be taken ...
             return cast(size_t) trunc(_available * _Vprime);
         }
     }
