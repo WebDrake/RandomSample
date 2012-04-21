@@ -410,6 +410,53 @@ void samplingTestAggregate(size_t total, size_t n, size_t repeats=1, bool verbos
     writeln;
 }
 
+void samplingTestFileIO(size_t n, size_t repeats = 1, bool verbose = true)
+{
+    size_t[] noSample(R)(R input, size_t n) { return []; }
+
+    writeln("Reading a 1001-line file and taking a sample of size ", n, ", ", repeats, " times.");
+
+    void fileSample(alias Sampler)()
+    {
+        clock_t start_time, end_time;
+
+        start_time = clock();
+        foreach(size_t i; 0..repeats)
+        {
+            {
+                auto f = File("athousandlines.txt", "r");
+                string[] s;
+
+                foreach(str; f.byLine)
+                    s ~= str.idup;
+
+                assert(n < s.length);
+
+                auto sel = Sampler(s, n);
+
+                if(verbose)
+                {
+                    foreach(str; sel)
+                        writeln(str);
+                }
+
+                f.close;
+            }
+        }
+        end_time = clock();
+        writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
+    }
+
+    writeln("No sample:");
+    fileSample!(noSample)();
+
+    writeln("Algorithm S:");
+    fileSample!(randomSample)();
+
+    writeln("Algorithm D:");
+    fileSample!(randomSampleVitter)();
+}
+
 void main(string[] args)
 {
     auto s = randomSampleVitter(iota(0,100),5);
@@ -427,5 +474,7 @@ void main(string[] args)
     samplingTestAggregate(1000, 5, 1_000_000, false);
 
     samplingTestAggregate(100_000_000, 1_000, 1, false);
+
+    samplingTestFileIO(5, 100_000, false);
 }
 
