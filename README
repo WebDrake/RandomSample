@@ -8,6 +8,8 @@ functionality rewritten to use Jeffrey Scott Vitter's Algorithm D
 
 Compile and run the program to see a series of benchmarks of the new
 algorithm compared to the algorithm currently implemented in Phobos.
+Make sure you have the latest development versions of DMD and Phobos
+installed first.
 
 To compile, either:
 
