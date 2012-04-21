@@ -365,49 +365,43 @@ unittest
 
 void samplingTestAggregate(size_t total, size_t n, size_t repeats=1, bool verbose=true)
 {
-    double[] recordCountS, recordCountD;
-    clock_t start_time, end_time;
-
-    void displayResults(double[] recordCount)
-    {
-        foreach(size_t i, double c; recordCount)
-            writeln("\trecord ", i, " was picked ", c, " times.");
-    }
-
     writeln("Picking ", n, " from ", total, ", ", repeats, " times.");
     writeln;
 
-    writeln("Algorithm S:");
-    recordCountS.length = total;
-    recordCountS[] = 0.0;
-    start_time = clock();
-    foreach(size_t i; 0..repeats)
+    void displayResults(R)(R[] recordCount)
     {
-        auto sampleS = randomSample(iota(0, total), n);
-        foreach(size_t s; sampleS)
-            recordCountS[s]++;
+        foreach(size_t i, R c; recordCount)
+            writeln("\trecord ", i, " was picked ", c, " times.");
     }
-    end_time = clock();
-    if(verbose)
-        displayResults(recordCountS);
-    writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
-    writeln;
+
+    void sampleAggregate(alias Sampler)()
+    {
+        size_t[] recordCount;
+        clock_t start_time, end_time;
+
+        recordCount.length = total;
+        recordCount[] = 0;
+
+        start_time = clock();
+        foreach(size_t i; 0..repeats)
+        {
+            auto sample = Sampler(iota(0, total), n);
+            foreach(size_t s; sample)
+                recordCount[s]++;
+        }
+        end_time = clock();
+
+        if(verbose)
+            displayResults(recordCount);
+        writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
+        writeln;
+    }
+
+    writeln("Algorithm S:");
+    sampleAggregate!(randomSample)();
 
     writeln("Algorithm D:");
-    recordCountD.length = total;
-    recordCountD[] = 0.0;
-    start_time = clock();
-    foreach(size_t i; 0..repeats)
-    {
-        auto sampleD = randomSampleVitter(iota(0, total), n);
-        foreach(size_t s; sampleD)
-            recordCountD[s]++;
-    }
-    end_time = clock();
-    if(verbose)
-        displayResults(recordCountD);
-    writeln("\t\tSampling completed in ",(cast(double) (end_time - start_time))/CLOCKS_PER_SEC, " seconds.");
-    writeln;
+    sampleAggregate!(randomSampleVitter)();
 }
 
 void samplingTestFileIO(size_t n, size_t repeats = 1, bool verbose = true)
@@ -432,11 +426,11 @@ void samplingTestFileIO(size_t n, size_t repeats = 1, bool verbose = true)
 
                 assert(n < s.length);
 
-                auto sel = Sampler(s, n);
+                auto sample = Sampler(s, n);
 
                 if(verbose)
                 {
-                    foreach(str; sel)
+                    foreach(str; sample)
                         writeln(str);
                 }
 
