@@ -74,7 +74,7 @@ Constructor.
         }
         else
         {
-            newVprime(_toSelect);
+            _Vprime = newVprime(_toSelect);
             _algorithmA = false;
         }
         // we should skip some elements initially so we don't always
@@ -174,7 +174,7 @@ to remaining data values is sufficiently large.
 /**
 Randomly reset the value of _Vprime.
 */
-    private void newVprime(size_t remaining)
+    private double newVprime(size_t remaining)
     {
         static if(is(Random == void))
         {
@@ -185,7 +185,7 @@ Randomly reset the value of _Vprime.
             double r = uniform!("()")(0.0, 1.0, gen);
         }
 
-        _Vprime = r ^^ (1.0 / remaining);
+        return r ^^ (1.0 / remaining);
     }
 
 /**
@@ -229,7 +229,7 @@ Variable names are chosen to match those in Vitter's paper.
                     S >= qu1;
                     X = _available * (1-_Vprime), S = cast(size_t) trunc(X))
                 {
-                    newVprime(_toSelect);
+                    _Vprime = newVprime(_toSelect);
                 }
 
                 static if(is(Random == void))
@@ -275,14 +275,14 @@ Variable names are chosen to match those in Vitter's paper.
                     {
                         // If it's not acceptable, we generate a new value of _Vprime
                         // and go back to the start of the for(;;) loop.
-                        newVprime(_toSelect);
+                        _Vprime = newVprime(_toSelect);
                     }
                     else
                     {
                         // If it's acceptable we generate a new value of _Vprime
                         // based on the remaining number of sample points needed,
                         // and return S.
-                        newVprime(_toSelect-1);
+                        _Vprime = newVprime(_toSelect-1);
                         return S;
                     }
                 }
