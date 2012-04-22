@@ -17,7 +17,7 @@ To compile, either:
 
 or, if you don't have make installed,
 
-  dmd -O -release -inline -ofrandomsample randomsample.d
+  dmd -O -inline -ofrandomsample randomsample.d
 
 Note that for demonstration purposes it is not recommended to compile
 the program without these optimization flags, as otherwise the demo

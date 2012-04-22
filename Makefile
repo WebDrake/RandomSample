@@ -1,5 +1,5 @@
 DC = dmd
-DFLAGS = -O -release -inline
+DFLAGS = -O -inline
 BIN = randomsample
 SRC = randomsample.d
 
