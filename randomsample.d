@@ -17,10 +17,6 @@ RandomSampleVitter) throws an exception. This is because $(D total) is
 essential to computing the probability of selecting elements in the
 range.
 
-$(D RandomSampleVitter) implements Jeffrey Scott Vitter's Algorithm D,
-which selects a sample of size $(D n) in O(n) steps and requiring O(n)
-random variates, regardless of the size of the data being sampled.
-
 Example:
 ----
 int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ];
@@ -30,7 +26,11 @@ foreach (e; randomSampleVitter(a, 5))
     writeln(e);
 }
 ----
- */
+
+$(D RandomSampleVitter) implements Jeffrey Scott Vitter's Algorithm D,
+which selects a sample of size $(D n) in O(n) steps and requiring O(n)
+random variates, regardless of the size of the data being sampled.
+*/
 struct RandomSampleVitter(R, Random = void)
     if(isUniformRNG!Random || is(Random == void))
 {
@@ -202,9 +202,10 @@ Variable names are chosen to match those in Vitter's paper.
 */
     private size_t skip()
     {
-        // If the number of points still to select is greater than a
-        // certain proportion of the remaining data points, we carry
-        // out the sampling with Algorithm A.
+        // Step D1: if the number of points still to select is greater
+        // than a certain proportion of the remaining data points, i.e.
+        // if n >= alpha * N where alpha = 1/13, we carry out the
+        // sampling with Algorithm A.
         if(_algorithmA)
         {
             return skipA;
